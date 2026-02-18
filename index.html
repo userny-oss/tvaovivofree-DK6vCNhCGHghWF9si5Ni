@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TV É FREE</title>
+
+<!-- Video.js -->
+<link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+<script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+
+<!-- hls.js -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+<script src="canais.js" defer></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0b0f1a;
+    color: #fff;
+}
+
+header {
+    background: #050812;
+    padding: 15px;
+    text-align: center;
+    font-size: 26px;
+    font-weight: bold;
+    color: #1e90ff;
+}
+
+#player-section {
+    margin: 15px;
+    border: 3px solid #1e90ff;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+#current-channel {
+    color: #1e90ff;
+    font-size: 18px;
+    margin-bottom: 8px;
+    display: none;
+}
+
+#player-box {
+    height: 190px;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    position: relative;
+}
+
+#player-text {
+    color: #aaa;
+    position: absolute;
+}
+
+#clappr-player {
+    width: 100%;
+    height: 100%;
+    display: none;
+}
+
+.video-js {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+#options-box {
+    display: none;
+    margin-top: 14px;
+    justify-content: center;
+    gap: 10px;
+}
+
+.option-btn {
+    padding: 8px 12px;
+    border-radius: 4px;
+    background: #12172a;
+    cursor: pointer;
+}
+
+.option-btn.active {
+    background: #1e90ff;
+    color: #000;
+}
+
+main {
+    padding: 15px;
+}
+
+.category {
+    margin-top: 30px;
+}
+
+.category-title {
+    font-size: 22px;
+    font-weight: bold;
+    color: #1e90ff;
+    border-left: 6px solid #1e90ff;
+    padding-left: 10px;
+    margin-bottom: 15px;
+}
+
+.channel {
+    background: #12172a;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+    
+.channel img {
+    width: 35px;
+    height: 35px;
+    object-fit: contain;
+}
+    
+.channel.active {
+    outline: 2px solid #1e90ff;
+}
+
+footer {
+    background: #050812;
+    text-align: center;
+    padding: 10px;
+    font-size: 13px;
+    color: #777;
+}
+</style>
+</head>
+
+<body>
+
+<header>TV É FREE</header>
+
+<section id="player-section">
+    <div id="current-channel"></div>
+
+    <div id="player-box">
+        <span id="player-text">Escolha um canal abaixo</span>
+        <div id="clappr-player"></div>
+    </div>
+
+    <div id="options-box">
+        <div class="option-btn" data-option="1">Opção 1</div>
+        <div class="option-btn" data-option="2">Opção 2</div>
+        <div class="option-btn" data-option="3">Opção 3</div>
+    </div>
+</section>
+
+<main id="channels-container"></main>
+
+<footer>© 2026 TV É FREE</footer>
+
+<script>
+let player = null;
+let hls = null;
+let currentUrls = {};
+
+const playerContainer = document.getElementById('clappr-player');
+const playerText = document.getElementById('player-text');
+const optionsBox = document.getElementById('options-box');
+const currentChannel = document.getElementById('current-channel');
+
+function stopPlayer() {
+    if (player) {
+        player.dispose();
+        player = null;
+    }
+    if (hls) {
+        hls.destroy();
+        hls = null;
+    }
+    playerContainer.innerHTML = "";
+    playerContainer.style.display = 'none';
+}
+
+document.addEventListener('click', e => {
+    const channel = e.target.closest('.channel');
+    if (!channel) return;
+
+    stopPlayer();
+
+    document.querySelectorAll('.channel').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
+
+    channel.classList.add('active');
+
+    currentUrls = channel.dataset;
+
+    currentChannel.innerText = channel.dataset.name;
+    currentChannel.style.display = 'block';
+
+    playerText.innerText = 'Escolha uma opção abaixo';
+    playerText.style.display = 'block';
+
+    optionsBox.style.display = 'flex';
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+document.querySelectorAll('.option-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        stopPlayer();
+
+        const url =
+            btn.dataset.option === '1' ? currentUrls.op1 :
+            btn.dataset.option === '2' ? currentUrls.op2 :
+            currentUrls.op3;
+
+        if (!url) return;
+
+        playerText.style.display = 'none';
+        playerContainer.style.display = 'block';
+
+        // cria elemento video
+        const videoElement = document.createElement('video');
+        videoElement.className = 'video-js vjs-default-skin';
+        videoElement.setAttribute('controls', true);
+        videoElement.setAttribute('autoplay', true);
+        videoElement.setAttribute('playsinline', true);
+
+        playerContainer.appendChild(videoElement);
+
+        player = videojs(videoElement, {
+            autoplay: true,
+            controls: true,
+            fluid: false
+        });
+
+        if (Hls.isSupported() && url.includes('.m3u8')) {
+            hls = new Hls();
+            hls.loadSource(url);
+            hls.attachMedia(videoElement);
+        } else {
+            player.src({ src: url });
+        }
+    });
+});
+</script>
+
+</body>
+</html>
